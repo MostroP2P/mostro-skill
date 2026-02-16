@@ -82,12 +82,86 @@ export function generateNewMnemonic(): string {
   return generateMnemonic(wordlist, 128);
 }
 
+// ─── Trade Index Persistence ────────────────────────────────────────────────
+
+const SKILL_DATA_DIR = join(process.env.HOME ?? "/tmp", ".mostro-skill");
+const TRADE_STATE_FILE = join(SKILL_DATA_DIR, "trade-state.json");
+
+interface TradeKeyState {
+  next_trade_index: number;
+}
+
+function ensureDataDir(): void {
+  if (!existsSync(SKILL_DATA_DIR)) {
+    mkdirSync(SKILL_DATA_DIR, { recursive: true, mode: 0o700 });
+  }
+}
+
+function loadTradeKeyState(): TradeKeyState {
+  if (!existsSync(TRADE_STATE_FILE)) return { next_trade_index: 1 };
+  try {
+    const data = JSON.parse(readFileSync(TRADE_STATE_FILE, "utf-8"));
+    return { next_trade_index: data.next_trade_index ?? 1 };
+  } catch {
+    return { next_trade_index: 1 };
+  }
+}
+
+function saveTradeKeyState(state: TradeKeyState): void {
+  ensureDataDir();
+  // Merge with existing file (safety.ts also writes trade-state.json)
+  let existing: Record<string, unknown> = {};
+  if (existsSync(TRADE_STATE_FILE)) {
+    try { existing = JSON.parse(readFileSync(TRADE_STATE_FILE, "utf-8")); } catch {}
+  }
+  writeFileSync(
+    TRADE_STATE_FILE,
+    JSON.stringify({ ...existing, next_trade_index: state.next_trade_index }, null, 2),
+    { mode: 0o600 }
+  );
+}
+
+/**
+ * Get the next trade keys and auto-increment the trade index
+ */
+export function getNextTradeKeys(keys: MostroKeys): { privateKey: string; publicKey: string; index: number } {
+  const state = loadTradeKeyState();
+  const index = state.next_trade_index;
+  const tradeKeys = keys.getTradeKeys(index);
+  state.next_trade_index = index + 1;
+  saveTradeKeyState(state);
+  return { ...tradeKeys, index };
+}
+
+/**
+ * Get current trade index without incrementing
+ */
+export function getCurrentTradeIndex(): number {
+  return loadTradeKeyState().next_trade_index;
+}
+
+/**
+ * Set the trade index (used during session restore)
+ */
+export function setTradeIndex(index: number): void {
+  saveTradeKeyState({ next_trade_index: index });
+}
+
+/**
+ * Import an existing mnemonic phrase
+ */
+export function importMnemonic(mnemonic: string): MostroKeys {
+  const trimmed = mnemonic.trim();
+  if (!validateMnemonic(trimmed, wordlist)) {
+    throw new Error("Invalid mnemonic phrase");
+  }
+  saveMnemonic(trimmed);
+  return keysFromMnemonic(trimmed);
+}
+
 // ─── Seed Storage ───────────────────────────────────────────────────────────
 
-const SEED_DIR = join(
-  process.env.HOME ?? "/tmp",
-  ".mostro-skill"
-);
+const SEED_DIR = SKILL_DATA_DIR;
 const SEED_FILE = join(SEED_DIR, "seed");
 
 /**

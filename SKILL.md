@@ -67,6 +67,47 @@ All scripts are in `scripts/` and run with `tsx`:
 | `--invoice` | ❌ | LN invoice or address (for take-sell) |
 | `--amount` | ❌ | Fiat amount (required for range orders) |
 
+### Advanced Tools
+
+| Script | Description | Example |
+|--------|-------------|---------|
+| `add-invoice.ts` | Send LN invoice after taking a sell order | `tsx scripts/add-invoice.ts --order-id <uuid> --invoice <lnbc...>` |
+| `dispute-chat.ts` | Send messages during a dispute | `tsx scripts/dispute-chat.ts --order-id <uuid> --message "proof attached"` |
+| `restore-session.ts` | Import mnemonic and restore active orders | `tsx scripts/restore-session.ts --mnemonic "word1 word2 ..."` |
+| `analytics.ts` | Trade history and statistics | `tsx scripts/analytics.ts` or `--recent 10` or `--csv` |
+| `multi-mostro.ts` | Query multiple Mostro instances | `tsx scripts/multi-mostro.ts --currency USD --kind sell --best` |
+| `auto-trade.ts` | Automated trading strategies | `tsx scripts/auto-trade.ts --strategy strategies/dca-weekly.json [--dry-run]` |
+
+### auto-trade.ts Strategies
+
+| Strategy | Config Example | Description |
+|----------|---------------|-------------|
+| DCA | `strategies/dca-weekly.json` | Buy/sell fixed amount at regular intervals |
+| Limit | `strategies/limit-buy.json` | Take orders matching specific criteria (premium, rating) |
+| Market Maker | `strategies/market-maker.json` | Maintain buy and sell orders with a spread |
+
+All strategies support `--dry-run` for testing. Set `"enabled": true` in the strategy JSON to activate.
+
+### analytics.ts Options
+
+| Flag | Description | Example |
+|------|-------------|---------|
+| `--recent N` | Show last N audit entries | `--recent 10` |
+| `--csv` | Export all trades to CSV file | `--csv` |
+| `--days N` | Stats for last N days only | `--days 30` |
+| `--output` | Output file for CSV export | `--output trades.csv` |
+
+### multi-mostro.ts Options
+
+| Flag | Description | Example |
+|------|-------------|---------|
+| `--currency` | Filter by fiat currency | `--currency USD` |
+| `--kind` | Filter by order type | `--kind sell` |
+| `--best` | Show only the single best order | `--best` |
+| `--list-instances` | List configured Mostro instances | `--list-instances` |
+
+Configure multiple instances in `config.json` under `mostro_instances` array.
+
 ## Trade Flow
 
 ### Buying BTC

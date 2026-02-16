@@ -183,3 +183,70 @@ export function isPremiumAcceptable(
 ): boolean {
   return Math.abs(orderPremium) <= maxDeviation;
 }
+
+/**
+ * Validate an order's price against market data
+ *
+ * Returns { valid, marketPrice, orderPrice, deviationPercent, reason? }
+ */
+export async function validateOrderPrice(
+  order: { fiat_amount: number; amount: number; fiat_code: string; premium?: number },
+  maxPremiumDeviation: number,
+  apiUrl = "https://api.yadio.io/exrates/BTC"
+): Promise<{
+  valid: boolean;
+  marketPrice: number | null;
+  orderPrice: number | null;
+  deviationPercent: number | null;
+  reason?: string;
+}> {
+  const marketPrice = await fetchBtcPrice(order.fiat_code, apiUrl);
+
+  if (marketPrice === null) {
+    return {
+      valid: true, // Allow if we can't check — don't block trades
+      marketPrice: null,
+      orderPrice: null,
+      deviationPercent: null,
+      reason: "Could not fetch market price — skipping validation",
+    };
+  }
+
+  // If premium is provided, check it directly
+  if (order.premium !== undefined) {
+    const deviation = order.premium;
+    const valid = Math.abs(deviation) <= maxPremiumDeviation;
+    return {
+      valid,
+      marketPrice,
+      orderPrice: null,
+      deviationPercent: deviation,
+      reason: valid
+        ? undefined
+        : `Premium ${deviation}% exceeds max deviation ±${maxPremiumDeviation}%`,
+    };
+  }
+
+  // If we have both fiat and sats amounts, calculate effective price
+  if (order.amount > 0 && order.fiat_amount > 0) {
+    const orderPrice = order.fiat_amount / (order.amount / 1e8);
+    const deviationPercent = ((orderPrice - marketPrice) / marketPrice) * 100;
+    const valid = Math.abs(deviationPercent) <= maxPremiumDeviation;
+    return {
+      valid,
+      marketPrice,
+      orderPrice,
+      deviationPercent: Math.round(deviationPercent * 100) / 100,
+      reason: valid
+        ? undefined
+        : `Price deviation ${deviationPercent.toFixed(1)}% exceeds max ±${maxPremiumDeviation}%`,
+    };
+  }
+
+  return {
+    valid: true,
+    marketPrice,
+    orderPrice: null,
+    deviationPercent: null,
+  };
+}

@@ -122,6 +122,27 @@ On first run, a new BIP-39 mnemonic is generated and saved to `~/.mostro-skill/s
 | `rate-user.ts` | Rate your counterparty (1-5 stars) | `npx tsx scripts/rate-user.ts --order-id <uuid> --rating 5` |
 | `dispute.ts` | Open a dispute on an active trade | `npx tsx scripts/dispute.ts --order-id <uuid>` |
 
+### 🤖 Advanced (Phase 4)
+
+| Script | Description | Usage |
+|--------|-------------|-------|
+| `add-invoice.ts` | Send LN invoice after taking a sell order without one | `npx tsx scripts/add-invoice.ts --order-id <uuid> --invoice <lnbc...>` |
+| `dispute-chat.ts` | Send messages during an active dispute | `npx tsx scripts/dispute-chat.ts --order-id <uuid> --message <text>` |
+| `restore-session.ts` | Import mnemonic and restore active orders/disputes | `npx tsx scripts/restore-session.ts [--mnemonic "..."]` |
+| `analytics.ts` | Trade history, stats, and CSV export | `npx tsx scripts/analytics.ts [--recent 10] [--csv] [--days 30]` |
+| `multi-mostro.ts` | Query and compare orders across multiple Mostro instances | `npx tsx scripts/multi-mostro.ts --currency USD --kind sell [--best]` |
+| `auto-trade.ts` | Automated trading (DCA, limit orders, market making) | `npx tsx scripts/auto-trade.ts --strategy <path> [--dry-run]` |
+
+#### Auto-Trading Strategies
+
+Example strategy configs in `strategies/`:
+
+- **`dca-weekly.json`** — Buy $20 USD of BTC every week
+- **`limit-buy.json`** — Auto-take sell orders below -2% premium
+- **`market-maker.json`** — Maintain ARS/BTC buy/sell spread
+
+All strategies support `--dry-run` mode for safe testing.
+
 ## Trade Flows
 
 ### 🛒 Buying Bitcoin
@@ -239,17 +260,27 @@ mostro-skill/
 │   ├── nostr.ts                # Nostr client, NIP-59 gift wrap, NIP-44 encryption
 │   ├── protocol.ts             # Mostro protocol types & message builders
 │   └── safety.ts               # Trade limits, audit logging, cooldowns
-└── scripts/                    # Executable tools
-    ├── get-info.ts             # Mostro instance info
-    ├── list-orders.ts          # Order book browser
-    ├── trade-status.ts         # Trade status checker
-    ├── create-order.ts         # Order creation
-    ├── take-order.ts           # Order taking
-    ├── cancel-order.ts         # Order cancellation
-    ├── fiat-sent.ts            # Fiat sent confirmation
-    ├── release.ts              # Sats release
-    ├── rate-user.ts            # User rating
-    └── dispute.ts              # Dispute opening
+├── scripts/                    # Executable tools
+│   ├── get-info.ts             # Mostro instance info
+│   ├── list-orders.ts          # Order book browser
+│   ├── trade-status.ts         # Trade status checker
+│   ├── create-order.ts         # Order creation
+│   ├── take-order.ts           # Order taking
+│   ├── cancel-order.ts         # Order cancellation
+│   ├── add-invoice.ts          # Send LN invoice
+│   ├── fiat-sent.ts            # Fiat sent confirmation
+│   ├── release.ts              # Sats release
+│   ├── rate-user.ts            # User rating
+│   ├── dispute.ts              # Dispute opening
+│   ├── dispute-chat.ts         # Dispute messaging
+│   ├── restore-session.ts      # Session restore from mnemonic
+│   ├── analytics.ts            # Trade history & stats
+│   ├── multi-mostro.ts         # Multi-instance queries
+│   └── auto-trade.ts           # Automated trading strategies
+└── strategies/                 # Example strategy configs
+    ├── dca-weekly.json         # DCA: $20/week
+    ├── limit-buy.json          # Limit: take below -2%
+    └── market-maker.json       # Market maker: ARS spread
 ```
 
 ### How It Works
@@ -384,7 +415,7 @@ Any AI platform that can read instructions and execute shell commands can use th
 | **Phase 1**: Foundation | ✅ | Skill structure, Nostr connectivity, key management, read-only tools |
 | **Phase 2**: Order Creation | ✅ | Create/take/cancel orders with confirmation workflow |
 | **Phase 3**: Trade Completion | ✅ | Full lifecycle (fiat-sent, release, rate, dispute) |
-| **Phase 4**: Advanced | 🔜 | Auto-trading, DCA, multi-Mostro, MCP server, ClawHub |
+| **Phase 4**: Advanced | ✅ | Auto-trading, DCA, multi-Mostro, session restore, analytics, dispute chat |
 
 See [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md) for the full technical specification.
 

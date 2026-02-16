@@ -14,5 +14,12 @@
     "require_confirmation": true
   },
   "price_api": "https://api.yadio.io/exrates/BTC",
-  "max_premium_deviation": 5
+  "max_premium_deviation": 5,
+  "mostro_instances": [
+    {
+      "name": "mostro-mainnet",
+      "pubkey": "",
+      "relays": ["wss://relay.mostro.network"]
+    }
+  ]
 }

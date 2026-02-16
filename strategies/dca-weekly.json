@@ -1,0 +1,12 @@
+{
+  "type": "dca",
+  "name": "Weekly BTC DCA — $20 USD",
+  "enabled": false,
+  "kind": "buy",
+  "currency": "USD",
+  "fiat_amount": 20,
+  "payment_method": "bank transfer",
+  "interval_hours": 168,
+  "max_premium": 3,
+  "invoice": ""
+}

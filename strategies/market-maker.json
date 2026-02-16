@@ -1,0 +1,12 @@
+{
+  "type": "market-maker",
+  "name": "ARS/BTC Market Maker",
+  "enabled": false,
+  "currency": "ARS",
+  "payment_method": "bank transfer,mercadopago",
+  "buy_premium": -2,
+  "sell_premium": 2,
+  "fiat_amount": 0,
+  "min_amount": 5000,
+  "max_amount": 50000
+}

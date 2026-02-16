@@ -14,7 +14,13 @@
     "fiat-sent": "tsx scripts/fiat-sent.ts",
     "release": "tsx scripts/release.ts",
     "rate-user": "tsx scripts/rate-user.ts",
-    "dispute": "tsx scripts/dispute.ts"
+    "dispute": "tsx scripts/dispute.ts",
+    "add-invoice": "tsx scripts/add-invoice.ts",
+    "dispute-chat": "tsx scripts/dispute-chat.ts",
+    "restore-session": "tsx scripts/restore-session.ts",
+    "analytics": "tsx scripts/analytics.ts",
+    "multi-mostro": "tsx scripts/multi-mostro.ts",
+    "auto-trade": "tsx scripts/auto-trade.ts"
   },
   "dependencies": {
     "nostr-tools": "^2.10.4",

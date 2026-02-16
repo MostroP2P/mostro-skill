@@ -1,0 +1,14 @@
+{
+  "type": "limit",
+  "name": "Limit Buy — Below -2% premium",
+  "enabled": false,
+  "kind": "buy",
+  "currency": "USD",
+  "action": "take-sell",
+  "payment_method": "bank transfer",
+  "max_premium": -2,
+  "min_amount": 10,
+  "max_amount": 100,
+  "min_rating": 4,
+  "invoice": ""
+}

@@ -188,18 +188,37 @@ expiration: Event expiration (NIP-40)
 - Trade state tracking and notifications
 - Range order support (child order creation)
 
-### Phase 4: Advanced Features
+### Phase 4: Advanced Features ✅
 **Goal**: Automation, multi-Mostro, ecosystem integration.
 
 **Deliverables**:
-- Auto-trading mode with configurable strategies
-- DCA (Dollar-Cost Averaging) scheduling
-- Multi-Mostro node support
-- Dispute chat integration
-- Session restore from mnemonic
-- Analytics and trade history
-- MCP server wrapper (optional)
-- Publish to ClawHub
+- `scripts/auto-trade.ts` — Automated trading with configurable strategies (DCA, limit, market making)
+- `strategies/` — Example strategy configs (dca-weekly, limit-buy, market-maker)
+- `scripts/multi-mostro.ts` — Query multiple Mostro instances, compare orders, find best prices
+- `scripts/restore-session.ts` — Import mnemonic, restore active orders/disputes, sync trade index
+- `scripts/analytics.ts` — Trade history parsing, stats calculation, CSV export
+- `scripts/dispute-chat.ts` — Send messages during disputes via Mostro's `send-dm` action
+- `scripts/add-invoice.ts` — Send LN invoice after taking a sell order without one
+- Updated `lib/keys.ts` — Trade index persistence, `getNextTradeKeys()`, `importMnemonic()`
+- Updated `lib/safety.ts` — Market price validation via `validateOrderPrice()`
+- Config: `mostro_instances` array for multi-Mostro support
+
+**Auto-Trading Strategies**:
+- **DCA**: Create orders at regular intervals with configurable amount, premium, and payment method
+- **Limit**: Monitor order book and auto-take orders matching criteria (premium, rating, amount range)
+- **Market Maker**: Maintain simultaneous buy/sell orders with a spread
+- All strategies support `--dry-run` mode and respect existing safety limits
+
+**Key Management Improvements**:
+- Trade index persisted in `~/.mostro-skill/trade-state.json`
+- `getNextTradeKeys()` auto-increments index per trade
+- `importMnemonic()` for migrating from other Mostro clients
+- `setTradeIndex()` for syncing after session restore
+
+**Price Validation**:
+- `validateOrderPrice()` compares order price/premium against market API
+- Checks both premium-based and calculated price deviation
+- Configurable max deviation via `max_premium_deviation` in config
 
 ## Security Model
 
