@@ -1,0 +1,33 @@
+{
+  "name": "mostro-trading",
+  "version": "0.1.0",
+  "description": "AI skill for trading on Mostro P2P Bitcoin exchange via Nostr",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "list-orders": "tsx scripts/list-orders.ts",
+    "get-info": "tsx scripts/get-info.ts",
+    "trade-status": "tsx scripts/trade-status.ts",
+    "create-order": "tsx scripts/create-order.ts",
+    "take-order": "tsx scripts/take-order.ts",
+    "cancel-order": "tsx scripts/cancel-order.ts",
+    "fiat-sent": "tsx scripts/fiat-sent.ts",
+    "release": "tsx scripts/release.ts",
+    "rate-user": "tsx scripts/rate-user.ts",
+    "dispute": "tsx scripts/dispute.ts"
+  },
+  "dependencies": {
+    "nostr-tools": "^2.10.4",
+    "@noble/hashes": "^1.7.1",
+    "@noble/secp256k1": "^2.2.3",
+    "@scure/bip32": "^1.6.2",
+    "@scure/bip39": "^1.5.4",
+    "uuid": "^11.1.0",
+    "websocket-polyfill": "^0.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.0.0"
+  }
+}

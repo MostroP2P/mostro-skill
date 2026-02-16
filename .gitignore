@@ -1,0 +1,12 @@
+node_modules/
+dist/
+config.json
+*.js
+*.d.ts
+*.js.map
+
+# Keep example config
+!config.example.json
+
+# Local data
+.mostro-skill/

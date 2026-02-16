@@ -1,0 +1,18 @@
+{
+  "mostro_pubkey": "",
+  "relays": [
+    "wss://relay.mostro.network",
+    "wss://relay.damus.io",
+    "wss://relay.nostr.band"
+  ],
+  "network": "mainnet",
+  "limits": {
+    "max_trade_amount_fiat": 100,
+    "max_daily_volume_fiat": 500,
+    "max_trades_per_day": 10,
+    "cooldown_seconds": 300,
+    "require_confirmation": true
+  },
+  "price_api": "https://api.yadio.io/exrates/BTC",
+  "max_premium_deviation": 5
+}
