@@ -17,6 +17,7 @@ import {
 import {
   buildOrderMessage,
   getInnerMessageKind,
+  filterResponsesByRequestId,
   type Action,
   type Payload,
 } from "../lib/protocol.js";
@@ -126,7 +127,8 @@ async function main() {
       return;
     }
 
-    for (const resp of responses) {
+    const filtered = filterResponsesByRequestId(responses, requestId);
+    for (const resp of filtered) {
       const kind = getInnerMessageKind(resp.message);
 
       switch (kind.action) {

@@ -237,9 +237,12 @@ export async function fetchGiftWraps(
   const recipientPubkey = getPublicKey(recipientBytes);
 
   // NIP-59 gift wraps use tweaked timestamps (up to 2 days in the past) for privacy.
-  // We must NOT use a tight `since` filter or we'll miss recent responses.
-  // Use 3 days to be safe, or no since at all for short windows.
-  const since = Math.floor(Date.now() / 1000) - 3 * 24 * 60 * 60;
+  // Respect sinceMinutes but enforce a 3-day minimum floor so we never miss
+  // responses with tweaked timestamps.
+  const THREE_DAYS = 3 * 24 * 60 * 60;
+  const requestedWindow = sinceMinutes * 60;
+  const window = Math.max(requestedWindow, THREE_DAYS);
+  const since = Math.floor(Date.now() / 1000) - window;
 
   const filter: Filter = {
     kinds: [KIND_GIFT_WRAP],

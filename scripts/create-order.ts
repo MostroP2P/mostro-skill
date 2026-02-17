@@ -17,6 +17,7 @@ import {
   buildOrderMessage,
   buildNewOrderPayload,
   getInnerMessageKind,
+  filterResponsesByRequestId,
   type OrderKind,
 } from "../lib/protocol.js";
 import { getOrCreateKeys } from "../lib/keys.js";
@@ -147,16 +148,9 @@ async function main() {
       return;
     }
 
-    // Filter responses matching our request_id to avoid showing old responses
-    const matchingResponses = responses.filter((resp) => {
-      const kind = getInnerMessageKind(resp.message);
-      return kind.request_id === requestId || responses.length === 1;
-    });
+    const filtered = filterResponsesByRequestId(responses, requestId);
 
-    // If no matching response found, show the most recent one as fallback
-    const displayResponses = matchingResponses.length > 0 ? matchingResponses : responses.slice(-1);
-
-    for (const resp of displayResponses) {
+    for (const resp of filtered) {
       const kind = getInnerMessageKind(resp.message);
       if (kind.action === "new-order") {
         const payload = kind.payload as any;

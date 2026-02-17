@@ -11,7 +11,8 @@
 
 import { loadConfig, validateConfig } from "../lib/config.js";
 import { createClient, closeClient, sendGiftWrap, fetchGiftWraps } from "../lib/nostr.js";
-import { buildOrderMessage, getInnerMessageKind, type Payload } from "../lib/protocol.js";
+import { buildOrderMessage, getInnerMessageKind,
+  filterResponsesByRequestId, type Payload } from "../lib/protocol.js";
 import { getOrCreateKeys } from "../lib/keys.js";
 import { auditLog } from "../lib/safety.js";
 
@@ -63,7 +64,8 @@ async function main() {
       console.log("📤 Message sent. (No immediate response from Mostro)");
     }
 
-    for (const resp of responses) {
+    const filtered = filterResponsesByRequestId(responses, requestId);
+    for (const resp of filtered) {
       const kind = getInnerMessageKind(resp.message);
       switch (kind.action) {
         case "cant-do":
