@@ -27,6 +27,7 @@ import {
 } from "nostr-tools";
 import { hexToBytes, bytesToHex } from "@noble/hashes/utils";
 import { secp256k1 } from "@noble/curves/secp256k1";
+import { publishToRelays } from "./nostr.js";
 
 // ─── Shared Key ─────────────────────────────────────────────────────────────
 
@@ -49,9 +50,19 @@ export function computeSharedKey(
 ): SharedKeyPair {
   // secp256k1 ECDH: multiply peer's pubkey by our private key
   // getSharedSecret returns 33-byte compressed point; take x-coordinate (bytes 1-33)
+  // Normalize pubkey: if already compressed (66 hex chars with 02/03 prefix), use as-is;
+  // if raw x-coordinate (64 hex chars), prepend "02"
+  let compressedPubkey: string;
+  if (peerPublicKeyHex.length === 66 && (peerPublicKeyHex.startsWith("02") || peerPublicKeyHex.startsWith("03"))) {
+    compressedPubkey = peerPublicKeyHex;
+  } else if (peerPublicKeyHex.length === 64) {
+    compressedPubkey = "02" + peerPublicKeyHex;
+  } else {
+    throw new Error(`Invalid peer public key length: ${peerPublicKeyHex.length} hex chars (expected 64 or 66)`);
+  }
   const sharedPoint = secp256k1.getSharedSecret(
     ourPrivateKeyHex,
-    "02" + peerPublicKeyHex
+    compressedPubkey
   );
   const privateKey = bytesToHex(sharedPoint.slice(1, 33));
   const publicKey = getPublicKey(hexToBytes(privateKey));
@@ -120,21 +131,7 @@ export async function sendP2PMessage(
   );
 
   // 4. Publish to relays
-  const publishPromises = relays.map(async (relay) => {
-    const promises = pool.publish([relay], wrapper);
-    await Promise.all(promises);
-    return relay;
-  });
-  const results = await Promise.allSettled(publishPromises);
-  const succeeded = results.filter((r) => r.status === "fulfilled");
-  const failed = results.filter((r) => r.status === "rejected");
-  for (const f of failed) {
-    const reason = (f as PromiseRejectedResult).reason;
-    console.warn(`⚠️  Relay publish failed: ${reason?.message ?? reason}`);
-  }
-  if (succeeded.length === 0) {
-    throw new Error(`Failed to publish chat message to any relay`);
-  }
+  await publishToRelays(pool, relays, wrapper);
 }
 
 // ─── Receive Messages ───────────────────────────────────────────────────────

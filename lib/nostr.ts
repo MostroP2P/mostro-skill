@@ -20,6 +20,34 @@ import type { MostroConfig } from "./config.js";
 import type { MostroKeys } from "./keys.js";
 import type { Message, RumorContent } from "./protocol.js";
 
+// ─── Shared Relay Helpers ───────────────────────────────────────────────────
+
+/**
+ * Publish an event to multiple relays with allSettled error handling.
+ * Throws if no relay accepted the event.
+ */
+export async function publishToRelays(
+  pool: SimplePool,
+  relays: string[],
+  event: NostrEvent
+): Promise<void> {
+  const publishPromises = relays.map(async (relay) => {
+    const promises = pool.publish([relay], event);
+    await Promise.all(promises);
+    return relay;
+  });
+  const results = await Promise.allSettled(publishPromises);
+  const succeeded = results.filter((r) => r.status === "fulfilled");
+  const failed = results.filter((r) => r.status === "rejected");
+  for (const f of failed) {
+    const reason = (f as PromiseRejectedResult).reason;
+    console.warn(`⚠️  Relay publish failed: ${reason?.message ?? reason}`);
+  }
+  if (succeeded.length === 0) {
+    throw new Error(`Failed to publish event to any relay: ${relays.join(", ")}`);
+  }
+}
+
 // Mostro event kinds
 export const KIND_ORDER = 38383;
 export const KIND_RATING = 38384;
@@ -173,25 +201,8 @@ export async function sendGiftWrap(
   const seal = nip59.createSeal(rumor, tradeKeyBytes, mostroPublicKey);
   const wrap = nip59.createWrap(seal, mostroPublicKey);
 
-  // Publish to relays — use allSettled to log per-relay failures
-  const publishPromises = client.relays.map(async (relay) => {
-    // pool.publish returns Promise<string>[] (one per relay), await the first
-    const promises = client.pool.publish([relay], wrap);
-    await Promise.all(promises);
-    return relay;
-  });
-  const results = await Promise.allSettled(publishPromises);
-  const succeeded = results.filter((r) => r.status === "fulfilled");
-  const failed = results.filter((r) => r.status === "rejected");
-  for (const f of failed) {
-    const reason = (f as PromiseRejectedResult).reason;
-    console.warn(`⚠️  Relay publish failed: ${reason?.message ?? reason}`);
-  }
-  if (succeeded.length === 0) {
-    throw new Error(
-      `Failed to publish gift wrap to any relay: ${client.relays.join(", ")}`
-    );
-  }
+  // Publish to relays
+  await publishToRelays(client.pool, client.relays, wrap);
 }
 
 /**

@@ -53,6 +53,12 @@ function parseArgs() {
 /**
  * Fetch the order details to get the peer's trade pubkey.
  */
+/**
+ * Poll interval and timeout for order queries (in ms).
+ */
+const ORDER_POLL_INTERVAL_MS = 2000;
+const ORDER_POLL_TIMEOUT_MS = 15000;
+
 async function getPeerTradePubkey(
   config: ReturnType<typeof loadConfig>,
   keys: ReturnType<typeof getOrCreateKeys>["keys"],
@@ -64,38 +70,45 @@ async function getPeerTradePubkey(
 
   const message = buildOrderMessage("orders", undefined, requestId, undefined, {
     ids: [orderId],
-  } as any);
+  });
 
   await sendGiftWrap(client, message, null, tradeKeys.privateKey);
-  await new Promise((r) => setTimeout(r, 5000));
 
-  const responses = await fetchGiftWraps(client, tradeKeys.privateKey);
-  const filtered = filterResponsesByRequestId(responses, requestId);
-  closeClient(client);
+  // Poll for response instead of arbitrary fixed delay
+  const deadline = Date.now() + ORDER_POLL_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, ORDER_POLL_INTERVAL_MS));
 
-  for (const resp of filtered) {
-    const kind = getInnerMessageKind(resp.message);
-    if (kind.action === "orders" && kind.payload) {
-      const payload = kind.payload as any;
-      const orders = payload.orders ?? [];
-      const order = orders.find((o: any) => o.id === orderId);
-      if (order) {
-        const ourPubkey = tradeKeys.publicKey;
-        if (order.seller_trade_pubkey === ourPubkey) {
-          if (!order.buyer_trade_pubkey) {
-            throw new Error("Buyer trade pubkey not yet available — is the trade fully matched?");
+    const responses = await fetchGiftWraps(client, tradeKeys.privateKey);
+    const filtered = filterResponsesByRequestId(responses, requestId);
+
+    for (const resp of filtered) {
+      const kind = getInnerMessageKind(resp.message);
+      if (kind.action === "orders" && kind.payload) {
+        const payload = kind.payload as Record<string, unknown>;
+        const orders = (payload.orders as Array<Record<string, string>>) ?? [];
+        const order = orders.find((o) => o.id === orderId);
+        if (order) {
+          const ourPubkey = tradeKeys.publicKey;
+          if (order.seller_trade_pubkey === ourPubkey) {
+            if (!order.buyer_trade_pubkey) {
+              throw new Error("Buyer trade pubkey not yet available — is the trade fully matched?");
+            }
+            closeClient(client);
+            return { peerPubkey: order.buyer_trade_pubkey, ourRole: "seller" };
+          } else {
+            if (!order.seller_trade_pubkey) {
+              throw new Error("Seller trade pubkey not yet available — is the trade fully matched?");
+            }
+            closeClient(client);
+            return { peerPubkey: order.seller_trade_pubkey, ourRole: "buyer" };
           }
-          return { peerPubkey: order.buyer_trade_pubkey, ourRole: "seller" };
-        } else {
-          if (!order.seller_trade_pubkey) {
-            throw new Error("Seller trade pubkey not yet available — is the trade fully matched?");
-          }
-          return { peerPubkey: order.seller_trade_pubkey, ourRole: "buyer" };
         }
       }
     }
   }
 
+  closeClient(client);
   throw new Error("Could not find order or peer trade pubkey. Is the order active?");
 }
 

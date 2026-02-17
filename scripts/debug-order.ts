@@ -49,7 +49,7 @@ async function main() {
   // Wait and poll multiple times
   for (const waitSec of [5, 10, 15]) {
     console.log(`\n⏳ Waiting ${waitSec}s total...`);
-    await new Promise(r => setTimeout(r, (waitSec === 5 ? 5 : 5) * 1000));
+    await new Promise(r => setTimeout(r, waitSec * 1000));
 
     console.log("🔍 Checking trade key responses...");
     const wraps = await fetchGiftWraps(client, tradeKeys.privateKey, 5);
