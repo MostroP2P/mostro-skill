@@ -190,8 +190,7 @@ export async function sendGiftWrap(
   client: MostroClient,
   message: Message,
   signature: string | null,
-  tradeKeyPrivate: string,
-  _identityKeyPrivate?: string
+  tradeKeyPrivate: string
 ): Promise<void> {
   if (!client.keys) throw new Error("Keys not configured");
 

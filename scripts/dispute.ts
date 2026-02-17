@@ -47,7 +47,7 @@ async function main() {
   const client = createClient(config, keys);
 
   try {
-    await sendGiftWrap(client, message, null, tradeKeys.privateKey, keys.identityPrivateKey);
+    await sendGiftWrap(client, message, null, tradeKeys.privateKey);
 
     console.log("⏳ Waiting for confirmation...\n");
     await new Promise((r) => setTimeout(r, 5000));

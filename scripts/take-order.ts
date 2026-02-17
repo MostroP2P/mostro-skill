@@ -113,8 +113,7 @@ async function main() {
       client,
       message,
       null, // TODO: sign for reputation
-      tradeKeys.privateKey,
-      keys.identityPrivateKey
+      tradeKeys.privateKey
     );
 
     console.log("⏳ Waiting for response...\n");

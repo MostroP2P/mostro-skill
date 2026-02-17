@@ -63,12 +63,12 @@ async function main() {
       // Restore session to get all active orders
       console.log("🔍 Fetching all active orders...\n");
       const message = buildRestoreMessage("restore-session");
+      const tradeKeys = keys.getTradeKeys(1);
       await sendGiftWrap(
         client,
         message,
         null,
-        keys.identityPrivateKey,
-        keys.identityPrivateKey
+        tradeKeys.privateKey
       );
 
       // Wait for response
@@ -76,7 +76,7 @@ async function main() {
 
       const responses = await fetchGiftWraps(
         client,
-        keys.identityPrivateKey,
+        tradeKeys.privateKey,
         5
       );
 
@@ -112,12 +112,12 @@ async function main() {
       const message = buildOrderMessage("orders", undefined, undefined, undefined, {
         ids: [opts.orderId],
       });
+      const tradeKeys2 = keys.getTradeKeys(1);
       await sendGiftWrap(
         client,
         message,
         null,
-        keys.identityPrivateKey,
-        keys.identityPrivateKey
+        tradeKeys2.privateKey
       );
 
       // Wait for response
@@ -125,7 +125,7 @@ async function main() {
 
       const responses = await fetchGiftWraps(
         client,
-        keys.identityPrivateKey,
+        tradeKeys2.privateKey,
         5
       );
 

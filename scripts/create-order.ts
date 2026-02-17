@@ -127,8 +127,7 @@ async function main() {
       client,
       message,
       null, // TODO: sign with trade key for reputation mode
-      tradeKeys.privateKey,
-      keys.identityPrivateKey
+      tradeKeys.privateKey
     );
 
     console.log("⏳ Waiting for confirmation...\n");
