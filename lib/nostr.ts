@@ -14,6 +14,7 @@ import {
   generateSecretKey,
   getPublicKey,
   nip44,
+  nip59,
   type Filter,
   type Event as NostrEvent,
   type UnsignedEvent,
@@ -179,9 +180,10 @@ function nip44Decrypt(
 /**
  * Send a NIP-59 gift-wrapped message to Mostro
  *
+ * Uses nostr-tools native NIP-59 implementation for correctness.
  * Structure:
  * 1. Rumor (unsigned kind 1) — trade key pubkey, contains the message
- * 2. Seal (kind 13) — signed by identity key, encrypts the rumor
+ * 2. Seal (kind 13) — signed by trade key, encrypts the rumor
  * 3. Gift Wrap (kind 1059) — signed by ephemeral key, encrypts the seal
  */
 export async function sendGiftWrap(
@@ -189,72 +191,35 @@ export async function sendGiftWrap(
   message: Message,
   signature: string | null,
   tradeKeyPrivate: string,
-  identityKeyPrivate?: string
+  _identityKeyPrivate?: string
 ): Promise<void> {
   if (!client.keys) throw new Error("Keys not configured");
 
   const mostroPublicKey = client.config.mostro_pubkey;
   const tradeKeyBytes = hexToBytes(tradeKeyPrivate);
-  const tradePublicKey = getPublicKey(tradeKeyBytes);
 
-  // The identity key signs the seal; if not provided, use trade key (privacy mode)
-  const sealKeyBytes = identityKeyPrivate
-    ? hexToBytes(identityKeyPrivate)
-    : tradeKeyBytes;
-  const sealPublicKey = identityKeyPrivate
-    ? getPublicKey(sealKeyBytes)
-    : tradePublicKey;
-
-  // 1. Build rumor content: [message, signature]
+  // Build rumor content: [message, signature] (Mostro protocol format)
   const rumorContent: RumorContent = [message, signature];
   const rumorContentStr = JSON.stringify(rumorContent);
 
-  // 2. Create rumor (unsigned event, kind 1)
-  const rumor: UnsignedEvent = {
-    kind: 1,
-    created_at: Math.floor(Date.now() / 1000),
-    tags: [],
-    content: rumorContentStr,
-    pubkey: tradePublicKey,
-  };
-
-  // 3. Create seal (kind 13) — encrypt rumor with identity key → Mostro
-  const encryptedRumor = nip44Encrypt(
-    sealKeyBytes,
-    mostroPublicKey,
-    JSON.stringify(rumor)
+  // Use nostr-tools native NIP-59 implementation
+  const rumor = nip59.createRumor(
+    {
+      kind: 1,
+      content: rumorContentStr,
+      tags: [["p", mostroPublicKey]],
+      created_at: Math.floor(Date.now() / 1000),
+    },
+    tradeKeyBytes
   );
 
-  const sealUnsigned: UnsignedEvent = {
-    kind: 13,
-    created_at: getTweakedTimestamp(),
-    tags: [],
-    content: encryptedRumor,
-    pubkey: sealPublicKey,
-  };
-  const signedSeal = finalizeEvent(sealUnsigned, sealKeyBytes);
+  const seal = nip59.createSeal(rumor, tradeKeyBytes, mostroPublicKey);
+  const wrap = nip59.createWrap(seal, mostroPublicKey);
 
-  // 4. Create gift wrap (kind 1059) — encrypt seal with ephemeral key → Mostro
-  const ephemeralKey = generateSecretKey();
-  const encryptedSeal = nip44Encrypt(
-    ephemeralKey,
-    mostroPublicKey,
-    JSON.stringify(signedSeal)
-  );
-
-  const giftWrapUnsigned: UnsignedEvent = {
-    kind: KIND_GIFT_WRAP,
-    created_at: getTweakedTimestamp(),
-    tags: [["p", mostroPublicKey]],
-    content: encryptedSeal,
-    pubkey: getPublicKey(ephemeralKey),
-  };
-  const signedGiftWrap = finalizeEvent(giftWrapUnsigned, ephemeralKey);
-
-  // 5. Publish to relays
+  // Publish to relays
   await Promise.any(
     client.relays.map((relay) =>
-      client.pool.publish([relay], signedGiftWrap)
+      client.pool.publish([relay], wrap)
     )
   );
 }
@@ -272,7 +237,10 @@ export async function fetchGiftWraps(
   const recipientBytes = hexToBytes(recipientPrivkey);
   const recipientPubkey = getPublicKey(recipientBytes);
 
-  const since = Math.floor(Date.now() / 1000) - sinceMinutes * 60;
+  // NIP-59 gift wraps use tweaked timestamps (up to 2 days in the past) for privacy.
+  // We must NOT use a tight `since` filter or we'll miss recent responses.
+  // Use 3 days to be safe, or no since at all for short windows.
+  const since = Math.floor(Date.now() / 1000) - 3 * 24 * 60 * 60;
 
   const filter: Filter = {
     kinds: [KIND_GIFT_WRAP],
@@ -289,21 +257,8 @@ export async function fetchGiftWraps(
 
   for (const event of events) {
     try {
-      // Decrypt gift wrap → seal
-      const sealJson = nip44Decrypt(
-        recipientBytes,
-        event.pubkey,
-        event.content
-      );
-      const seal = JSON.parse(sealJson);
-
-      // Decrypt seal → rumor
-      const rumorJson = nip44Decrypt(
-        recipientBytes,
-        seal.pubkey,
-        seal.content
-      );
-      const rumor = JSON.parse(rumorJson);
+      // Use nostr-tools native NIP-59 unwrap
+      const rumor = nip59.unwrapEvent(event, recipientBytes);
 
       // Parse rumor content
       const content = JSON.parse(rumor.content);

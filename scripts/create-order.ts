@@ -148,7 +148,16 @@ async function main() {
       return;
     }
 
-    for (const resp of responses) {
+    // Filter responses matching our request_id to avoid showing old responses
+    const matchingResponses = responses.filter((resp) => {
+      const kind = getInnerMessageKind(resp.message);
+      return kind.request_id === requestId || responses.length === 1;
+    });
+
+    // If no matching response found, show the most recent one as fallback
+    const displayResponses = matchingResponses.length > 0 ? matchingResponses : responses.slice(-1);
+
+    for (const resp of displayResponses) {
       const kind = getInnerMessageKind(resp.message);
       if (kind.action === "new-order") {
         const payload = kind.payload as any;
