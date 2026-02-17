@@ -63,7 +63,7 @@ Edit `config.json` with your settings:
   "mostro_pubkey": "<hex pubkey of your Mostro instance>",
   "relays": [
     "wss://relay.mostro.network",
-    "wss://relay.damus.io",
+    "wss://nos.lol",
     "wss://relay.nostr.band"
   ],
   "network": "mainnet",
