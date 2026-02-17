@@ -2,7 +2,7 @@
   "mostro_pubkey": "",
   "relays": [
     "wss://relay.mostro.network",
-    "wss://relay.damus.io",
+    "wss://nos.lol",
     "wss://relay.nostr.band"
   ],
   "network": "mainnet",

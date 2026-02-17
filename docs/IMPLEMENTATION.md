@@ -267,7 +267,7 @@ expiration: Event expiration (NIP-40)
   "mostro_pubkey": "<hex pubkey of the Mostro instance>",
   "relays": [
     "wss://relay.mostro.network",
-    "wss://relay.damus.io"
+    "wss://nos.lol"
   ],
   "network": "mainnet",
   "limits": {

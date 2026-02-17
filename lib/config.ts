@@ -24,7 +24,7 @@ export interface MostroConfig {
 
 const DEFAULT_CONFIG: MostroConfig = {
   mostro_pubkey: "",
-  relays: ["wss://relay.mostro.network", "wss://relay.damus.io"],
+  relays: ["wss://relay.mostro.network", "wss://nos.lol"],
   network: "mainnet",
   limits: {
     max_trade_amount_fiat: 100,
