@@ -19,6 +19,8 @@ import {
   type UnsignedEvent,
 } from "nostr-tools";
 import { hexToBytes, bytesToHex } from "@noble/hashes/utils";
+import { sha256 } from "@noble/hashes/sha256";
+import { schnorr } from "@noble/curves/secp256k1";
 import type { MostroConfig } from "./config.js";
 import type { MostroKeys } from "./keys.js";
 import type { Message, RumorContent } from "./protocol.js";
@@ -205,11 +207,18 @@ export async function sendGiftWrap(
     ? getPublicKey(sealKeyBytes)
     : tradePublicKey;
 
-  // 1. Build rumor content: [message, signature]
-  const rumorContent: RumorContent = [message, signature];
+  // 1. Compute signature: SHA256 hash of serialized message, signed by trade key
+  // This is required by Mostro protocol - without it, messages are silently ignored
+  const messageStr = JSON.stringify(message);
+  const messageHash = sha256(new TextEncoder().encode(messageStr));
+  const signatureBytes = schnorr.sign(messageHash, tradeKeyBytes);
+  const computedSignature = bytesToHex(signatureBytes);
+
+  // 2. Build rumor content: [message, signature]
+  const rumorContent: RumorContent = [message, computedSignature];
   const rumorContentStr = JSON.stringify(rumorContent);
 
-  // 2. Create rumor (unsigned event, kind 1)
+  // 3. Create rumor (unsigned event, kind 1)
   const rumor: UnsignedEvent = {
     kind: 1,
     created_at: Math.floor(Date.now() / 1000),
