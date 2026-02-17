@@ -58,7 +58,7 @@ async function main() {
     console.log("📡 Requesting last trade index from Mostro...");
     const indexMsg = buildRestoreMessage("last-trade-index");
     const requestId = Math.floor(Math.random() * 2 ** 48);
-    await sendGiftWrap(client, indexMsg, null, tradeKeys.privateKey, keys.identityPrivateKey);
+    await sendGiftWrap(client, indexMsg, null, tradeKeys.privateKey);
 
     await new Promise((r) => setTimeout(r, 5000));
     let responses = await fetchGiftWraps(client, tradeKeys.privateKey, 5);
@@ -81,7 +81,7 @@ async function main() {
     // Step 2: Restore session (get active orders and disputes)
     console.log("📡 Requesting session restore from Mostro...");
     const restoreMsg = buildRestoreMessage("restore-session");
-    await sendGiftWrap(client, restoreMsg, null, tradeKeys.privateKey, keys.identityPrivateKey);
+    await sendGiftWrap(client, restoreMsg, null, tradeKeys.privateKey);
 
     await new Promise((r) => setTimeout(r, 8000));
     responses = await fetchGiftWraps(client, tradeKeys.privateKey, 10);

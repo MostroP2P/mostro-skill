@@ -17,6 +17,7 @@ import {
   buildOrderMessage,
   buildNewOrderPayload,
   getInnerMessageKind,
+  filterResponsesByRequestId,
   type OrderKind,
 } from "../lib/protocol.js";
 import { getOrCreateKeys } from "../lib/keys.js";
@@ -127,8 +128,7 @@ async function main() {
       client,
       message,
       null, // TODO: sign with trade key for reputation mode
-      tradeKeys.privateKey,
-      keys.identityPrivateKey
+      tradeKeys.privateKey
     );
 
     console.log("⏳ Waiting for confirmation...\n");
@@ -148,7 +148,9 @@ async function main() {
       return;
     }
 
-    for (const resp of responses) {
+    const filtered = filterResponsesByRequestId(responses, requestId);
+
+    for (const resp of filtered) {
       const kind = getInnerMessageKind(resp.message);
       if (kind.action === "new-order") {
         const payload = kind.payload as any;

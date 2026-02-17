@@ -256,6 +256,26 @@ export function getInnerMessageKind(msg: Message): MessageKind {
 }
 
 /**
+ * Filter gift wrap responses by request_id to avoid processing stale responses.
+ * Returns only responses matching the given requestId, or falls back to the
+ * most recent response if no match is found.
+ */
+export function filterResponsesByRequestId(
+  responses: Array<{ message: Message; signature: string | null; timestamp: number }>,
+  requestId: number
+): Array<{ message: Message; signature: string | null; timestamp: number }> {
+  const matching = responses.filter((resp) => {
+    const kind = getInnerMessageKind(resp.message);
+    return kind.request_id === requestId;
+  });
+  // If no match, return the most recent response as fallback
+  if (matching.length === 0 && responses.length > 0) {
+    return responses.slice(-1);
+  }
+  return matching;
+}
+
+/**
  * Parse a rumor content string into [Message, signature]
  */
 export function parseRumorContent(content: string): RumorContent {

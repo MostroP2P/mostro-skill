@@ -156,7 +156,7 @@ async function executeDCA(
 
   try {
     console.log("📤 Creating DCA order...");
-    await sendGiftWrap(client, message, null, tradeKeys.privateKey, keys.identityPrivateKey);
+    await sendGiftWrap(client, message, null, tradeKeys.privateKey);
 
     await new Promise((r) => setTimeout(r, 8000));
     const responses = await fetchGiftWraps(client, tradeKeys.privateKey, 5);
@@ -276,7 +276,7 @@ async function executeLimit(
     const tradeClient = createClient(config, keys);
     try {
       console.log("📤 Taking order...");
-      await sendGiftWrap(tradeClient, message, null, tradeKeys.privateKey, keys.identityPrivateKey);
+      await sendGiftWrap(tradeClient, message, null, tradeKeys.privateKey);
       console.log("✅ Order taken!");
 
       recordTrade(fiatAmount);
@@ -342,7 +342,7 @@ async function executeMarketMaker(
     const buyMsg = buildOrderMessage("new-order", undefined, Math.floor(Math.random() * 2 ** 48), buyTradeKeys.index, buyPayload);
 
     console.log("📤 Creating buy order...");
-    await sendGiftWrap(client, buyMsg, null, buyTradeKeys.privateKey, keys.identityPrivateKey);
+    await sendGiftWrap(client, buyMsg, null, buyTradeKeys.privateKey);
 
     // Create sell order
     const sellTradeKeys = getNextTradeKeys(keys);
@@ -358,7 +358,7 @@ async function executeMarketMaker(
     const sellMsg = buildOrderMessage("new-order", undefined, Math.floor(Math.random() * 2 ** 48), sellTradeKeys.index, sellPayload);
 
     console.log("📤 Creating sell order...");
-    await sendGiftWrap(client, sellMsg, null, sellTradeKeys.privateKey, keys.identityPrivateKey);
+    await sendGiftWrap(client, sellMsg, null, sellTradeKeys.privateKey);
 
     console.log("✅ Market maker orders created.");
     recordTrade(strategy.fiat_amount);

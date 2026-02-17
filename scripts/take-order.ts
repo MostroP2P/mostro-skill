@@ -17,6 +17,7 @@ import {
 import {
   buildOrderMessage,
   getInnerMessageKind,
+  filterResponsesByRequestId,
   type Action,
   type Payload,
 } from "../lib/protocol.js";
@@ -113,8 +114,7 @@ async function main() {
       client,
       message,
       null, // TODO: sign for reputation
-      tradeKeys.privateKey,
-      keys.identityPrivateKey
+      tradeKeys.privateKey
     );
 
     console.log("⏳ Waiting for response...\n");
@@ -127,7 +127,8 @@ async function main() {
       return;
     }
 
-    for (const resp of responses) {
+    const filtered = filterResponsesByRequestId(responses, requestId);
+    for (const resp of filtered) {
       const kind = getInnerMessageKind(resp.message);
 
       switch (kind.action) {
