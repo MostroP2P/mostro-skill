@@ -8,11 +8,11 @@
  *   tsx scripts/chat.ts --order-id <uuid> --read --message "Hello!"  (read + send)
  */
 
+import { SimplePool } from "nostr-tools";
 import { loadConfig, validateConfig } from "../lib/config.js";
-import { createClient, closeClient, fetchGiftWraps } from "../lib/nostr.js";
+import { createClient, closeClient, fetchGiftWraps, sendGiftWrap } from "../lib/nostr.js";
 import { getOrCreateKeys } from "../lib/keys.js";
 import { getInnerMessageKind, filterResponsesByRequestId, buildOrderMessage } from "../lib/protocol.js";
-import { sendGiftWrap } from "../lib/nostr.js";
 import {
   computeSharedKey,
   sendP2PMessage,
@@ -82,8 +82,14 @@ async function getPeerTradePubkey(
       if (order) {
         const ourPubkey = tradeKeys.publicKey;
         if (order.seller_trade_pubkey === ourPubkey) {
+          if (!order.buyer_trade_pubkey) {
+            throw new Error("Buyer trade pubkey not yet available — is the trade fully matched?");
+          }
           return { peerPubkey: order.buyer_trade_pubkey, ourRole: "seller" };
         } else {
+          if (!order.seller_trade_pubkey) {
+            throw new Error("Seller trade pubkey not yet available — is the trade fully matched?");
+          }
           return { peerPubkey: order.seller_trade_pubkey, ourRole: "buyer" };
         }
       }
@@ -143,8 +149,7 @@ async function main() {
   const sharedKey = computeSharedKey(tradeKeys.privateKey, peerPubkey);
   console.log(`   Shared key: ${sharedKey.publicKey.slice(0, 16)}...\n`);
 
-  const pool = (await import("nostr-tools")).SimplePool ? new (await import("nostr-tools")).SimplePool() : null;
-  if (!pool) throw new Error("Failed to create pool");
+  const pool = new SimplePool();
 
   try {
     // Read messages

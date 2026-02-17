@@ -21,6 +21,7 @@ import {
   generateSecretKey,
   getPublicKey,
   nip44,
+  verifyEvent,
   type Filter,
   type Event as NostrEvent,
 } from "nostr-tools";
@@ -184,6 +185,11 @@ export async function fetchP2PMessages(
       );
       const decrypted = nip44.v2.decrypt(event.content, conversationKey);
       const innerEvent = JSON.parse(decrypted) as NostrEvent;
+
+      // Verify the inner event signature to prevent spoofing
+      if (!verifyEvent(innerEvent)) {
+        continue;
+      }
 
       messages.push({
         senderPubkey: innerEvent.pubkey,

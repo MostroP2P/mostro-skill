@@ -14,7 +14,7 @@ Full spec: https://mostro.network/protocol/chat.html
 
 Both parties independently derive the same shared key using ECDH:
 
-```
+```text
 Alice (seller):  shared_secret = ECDH(alice_trade_privkey, bob_trade_pubkey)
 Bob (buyer):     shared_secret = ECDH(bob_trade_privkey, alice_trade_pubkey)
                  → Same shared_secret (ECDH is symmetric)
@@ -127,7 +127,7 @@ The script automatically:
 
 Example output:
 
-```
+```text
 🔍 Fetching order 0c8d56ac-799c-4504-bdfb-661585532e11...
    Role: seller
    Peer: dc6d2a24a416d43b...
