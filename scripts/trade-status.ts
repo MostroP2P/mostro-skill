@@ -18,6 +18,7 @@ import {
   buildOrderMessage,
   buildRestoreMessage,
   getInnerMessageKind,
+  filterResponsesByRequestId,
   type Message,
 } from "../lib/protocol.js";
 import { getOrCreateKeys } from "../lib/keys.js";
@@ -57,35 +58,28 @@ async function main() {
   }
 
   const client = createClient(config, keys);
+  const tradeKeys = keys.getTradeKeys(1);
 
   try {
     if (opts.all) {
       // Restore session to get all active orders
       console.log("🔍 Fetching all active orders...\n");
+      const requestId = Math.floor(Math.random() * 2 ** 48);
       const message = buildRestoreMessage("restore-session");
-      const tradeKeys = keys.getTradeKeys(1);
-      await sendGiftWrap(
-        client,
-        message,
-        null,
-        tradeKeys.privateKey
-      );
+      await sendGiftWrap(client, message, null, tradeKeys.privateKey);
 
       // Wait for response
       await new Promise((r) => setTimeout(r, 5000));
 
-      const responses = await fetchGiftWraps(
-        client,
-        tradeKeys.privateKey,
-        5
-      );
+      const responses = await fetchGiftWraps(client, tradeKeys.privateKey);
+      const filtered = filterResponsesByRequestId(responses, requestId);
 
-      if (responses.length === 0) {
+      if (filtered.length === 0) {
         console.log("📭 No active orders found.");
         return;
       }
 
-      for (const resp of responses) {
+      for (const resp of filtered) {
         const kind = getInnerMessageKind(resp.message);
         if (kind.action === "restore-session" && kind.payload) {
           const payload = kind.payload as any;
@@ -109,32 +103,24 @@ async function main() {
     } else if (opts.orderId) {
       // Query specific order by ID
       console.log(`🔍 Fetching order ${opts.orderId}...\n`);
-      const message = buildOrderMessage("orders", undefined, undefined, undefined, {
+      const requestId = Math.floor(Math.random() * 2 ** 48);
+      const message = buildOrderMessage("orders", undefined, requestId, undefined, {
         ids: [opts.orderId],
       });
-      const tradeKeys2 = keys.getTradeKeys(1);
-      await sendGiftWrap(
-        client,
-        message,
-        null,
-        tradeKeys2.privateKey
-      );
+      await sendGiftWrap(client, message, null, tradeKeys.privateKey);
 
       // Wait for response
       await new Promise((r) => setTimeout(r, 5000));
 
-      const responses = await fetchGiftWraps(
-        client,
-        tradeKeys2.privateKey,
-        5
-      );
+      const responses = await fetchGiftWraps(client, tradeKeys.privateKey);
+      const filtered = filterResponsesByRequestId(responses, requestId);
 
-      if (responses.length === 0) {
+      if (filtered.length === 0) {
         console.log("📭 No response received. Order may not exist or not belong to you.");
         return;
       }
 
-      for (const resp of responses) {
+      for (const resp of filtered) {
         const kind = getInnerMessageKind(resp.message);
         console.log(`Action: ${kind.action}`);
         if (kind.payload) {
