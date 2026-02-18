@@ -69,7 +69,8 @@ export type Action =
   | "trade-pubkey"
   | "restore-session"
   | "last-trade-index"
-  | "orders";
+  | "orders"
+  | "unknown";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -152,6 +153,7 @@ export interface MessageKind {
 export type Message =
   | { order: MessageKind }
   | { dispute: MessageKind }
+  | { "cant-do": MessageKind }
   | { cant_do: MessageKind }
   | { rate: MessageKind }
   | { dm: MessageKind }
@@ -248,14 +250,14 @@ export function buildNewOrderPayload(params: {
 export function getInnerMessageKind(msg: Message): MessageKind {
   if ("order" in msg) return msg.order;
   if ("dispute" in msg) return msg.dispute;
-  if ("cant-do" in msg) return (msg as any)["cant-do"];
+  if ("cant-do" in msg) return (msg as { "cant-do": MessageKind })["cant-do"];
   if ("cant_do" in msg) return msg.cant_do;
   if ("rate" in msg) return msg.rate;
   if ("dm" in msg) return msg.dm;
   if ("restore" in msg) return msg.restore;
   // Skip unknown message types instead of crashing
   console.warn(`⚠️ Skipping unknown message type: ${Object.keys(msg).join(", ")}`);
-  return { version: 1, action: "unknown", payload: null } as any;
+  return { version: 1, action: "unknown", payload: null };
 }
 
 /**
