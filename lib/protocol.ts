@@ -248,11 +248,14 @@ export function buildNewOrderPayload(params: {
 export function getInnerMessageKind(msg: Message): MessageKind {
   if ("order" in msg) return msg.order;
   if ("dispute" in msg) return msg.dispute;
+  if ("cant-do" in msg) return (msg as any)["cant-do"];
   if ("cant_do" in msg) return msg.cant_do;
   if ("rate" in msg) return msg.rate;
   if ("dm" in msg) return msg.dm;
   if ("restore" in msg) return msg.restore;
-  throw new Error(`Unknown message type: ${JSON.stringify(msg)}`);
+  // Skip unknown message types instead of crashing
+  console.warn(`⚠️ Skipping unknown message type: ${Object.keys(msg).join(", ")}`);
+  return { version: 1, action: "unknown", payload: null } as any;
 }
 
 /**
@@ -268,10 +271,7 @@ export function filterResponsesByRequestId(
     const kind = getInnerMessageKind(resp.message);
     return kind.request_id === requestId;
   });
-  // If no match, return the most recent response as fallback
-  if (matching.length === 0 && responses.length > 0) {
-    return responses.slice(-1);
-  }
+  // If no match, return empty — don't fallback to stale responses
   return matching;
 }
 
