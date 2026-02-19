@@ -114,7 +114,7 @@ export interface PaymentFailedInfo {
 }
 
 export interface RestoreData {
-  orders: Array<{ order_id: string; id?: string; trade_index: number; status: string }>;
+  orders: Array<{ id?: string; order_id?: string; trade_index: number; status: string }>;
   disputes: Array<{
     dispute_id: string;
     order_id: string;

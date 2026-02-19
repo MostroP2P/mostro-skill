@@ -191,9 +191,11 @@ tsx scripts/trade-status.ts --order-id <uuid>
 
 **Important notes:**
 - The seed mnemonic is your only way to recover. **Back it up!**
-- `restore-session` only returns orders linked to trade index 1 by default
-- Orders in terminal states (completed, expired) may not appear
+- Mostro returns all non-finalized orders for the requesting trade key. Currently the client sends the restore request using trade index 1 only (`keys.getTradeKeys(1)`), so only orders created with that trade key are returned. This is a client-side limitation, not a Mostro server restriction.
+- `trade_index` and `request_id` are optional fields in the protocol (see [protocol overview](https://mostro.network/protocol/overview.html))
+- Orders in terminal states (completed, expired) are not returned
 - If you imported a mnemonic via `restore-session.ts`, use `--all` to verify your orders were recovered
+- See the [official restore-session docs](https://mostro.network/protocol/restore_session.html) for full protocol details
 
 ### request_id
 

@@ -20,6 +20,7 @@ import {
   getInnerMessageKind,
   filterResponsesByRequestId,
   type Message,
+  type RestoreData,
 } from "../lib/protocol.js";
 import { getOrCreateKeys } from "../lib/keys.js";
 
@@ -84,6 +85,10 @@ async function main() {
           })
           .sort((a, b) => b.timestamp - a.timestamp);
         if (restoreResponses.length > 0) {
+          const age = Math.floor(Date.now() / 1000) - restoreResponses[0].timestamp;
+          if (age > 30) {
+            console.warn(`⚠️  No request_id match — showing most recent restore response (${age}s old, may be from a previous session)\n`);
+          }
           filtered = [restoreResponses[0]];
         }
       }
@@ -97,14 +102,14 @@ async function main() {
       for (const resp of filtered) {
         const kind = getInnerMessageKind(resp.message);
         if (kind.action === "restore-session" && kind.payload) {
-          const payload = kind.payload as any;
+          const payload = kind.payload as { restore_data?: RestoreData };
           if (payload.restore_data) {
             const data = payload.restore_data;
             if (data.orders?.length > 0) {
               foundOrders = true;
               console.log(`📋 Active orders (${data.orders.length}):`);
               for (const o of data.orders) {
-                const id = o.order_id ?? o.id ?? "unknown";
+                const id = o.id ?? o.order_id ?? "unknown";
                 console.log(`  • ${id} — status: ${o.status} (trade index: ${o.trade_index})`);
               }
             }
@@ -134,10 +139,18 @@ async function main() {
       await new Promise((r) => setTimeout(r, 5000));
 
       const responses = await fetchGiftWraps(client, tradeKeys.privateKey);
-      // Try filtering by request_id; fall back to all recent responses
+      // Try filtering by request_id; fall back to most recent order-related response
       let filtered = filterResponsesByRequestId(responses, requestId);
       if (filtered.length === 0) {
-        filtered = responses;
+        const orderResponses = responses
+          .filter((r) => {
+            const k = getInnerMessageKind(r.message);
+            return k.action === "orders" || k.id === opts.orderId;
+          })
+          .sort((a, b) => b.timestamp - a.timestamp);
+        if (orderResponses.length > 0) {
+          filtered = [orderResponses[0]];
+        }
       }
 
       if (filtered.length === 0) {
