@@ -114,7 +114,7 @@ export interface PaymentFailedInfo {
 }
 
 export interface RestoreData {
-  orders: Array<{ id: string; trade_index: number; status: string }>;
+  orders: Array<{ id?: string; order_id?: string; trade_index: number; status: string }>;
   disputes: Array<{
     dispute_id: string;
     order_id: string;
@@ -190,11 +190,13 @@ export function buildOrderMessage(
  */
 export function buildRestoreMessage(
   action: "restore-session" | "last-trade-index",
+  requestId?: number,
   payload?: Payload
 ): Message {
   const kind: MessageKind = {
     version: 1,
     action,
+    ...(requestId !== undefined && { request_id: requestId }),
     ...(payload !== undefined && payload !== null && { payload }),
   };
   return { restore: kind };
@@ -262,18 +264,23 @@ export function getInnerMessageKind(msg: Message): MessageKind {
 
 /**
  * Filter gift wrap responses by request_id to avoid processing stale responses.
- * Returns only responses matching the given requestId, or falls back to the
- * most recent response if no match is found.
+ *
+ * - If requestId is provided, returns only responses matching that ID.
+ * - If requestId is undefined, returns all responses (no filtering).
+ *
+ * Note: request_id is an optional field in the Mostro protocol. Not all
+ * messages include it, and some responses may omit it even when the request
+ * included one.
  */
 export function filterResponsesByRequestId(
   responses: Array<{ message: Message; signature: string | null; timestamp: number }>,
-  requestId: number
+  requestId?: number
 ): Array<{ message: Message; signature: string | null; timestamp: number }> {
+  if (requestId === undefined) return responses;
   const matching = responses.filter((resp) => {
     const kind = getInnerMessageKind(resp.message);
-    return kind.request_id === requestId;
+    return kind.request_id != null && kind.request_id === requestId;
   });
-  // If no match, return empty — don't fallback to stale responses
   return matching;
 }
 

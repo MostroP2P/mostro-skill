@@ -20,6 +20,7 @@ import {
   getInnerMessageKind,
   filterResponsesByRequestId,
   type Message,
+  type RestoreData,
 } from "../lib/protocol.js";
 import { getOrCreateKeys } from "../lib/keys.js";
 
@@ -65,33 +66,55 @@ async function main() {
       // Restore session to get all active orders
       console.log("🔍 Fetching all active orders...\n");
       const requestId = Math.floor(Math.random() * 2 ** 48);
-      const message = buildRestoreMessage("restore-session");
+      const message = buildRestoreMessage("restore-session", requestId);
       await sendGiftWrap(client, message, null, tradeKeys.privateKey);
 
       // Wait for response
       await new Promise((r) => setTimeout(r, 5000));
 
       const responses = await fetchGiftWraps(client, tradeKeys.privateKey);
-      const filtered = filterResponsesByRequestId(responses, requestId);
+      // Try filtering by request_id first; fall back to most recent restore response
+      let filtered = filterResponsesByRequestId(responses, requestId);
+      if (filtered.length === 0) {
+        // Mostro may not echo request_id — take only the most recent restore response
+        // to avoid showing stale data from previous sessions
+        const restoreResponses = responses
+          .filter((r) => {
+            const k = getInnerMessageKind(r.message);
+            return k.action === "restore-session";
+          })
+          .sort((a, b) => b.timestamp - a.timestamp);
+        if (restoreResponses.length > 0) {
+          const age = Math.floor(Date.now() / 1000) - restoreResponses[0].timestamp;
+          if (age > 30) {
+            console.warn(`⚠️  No request_id match — showing most recent restore response (${age}s old, may be from a previous session)\n`);
+          }
+          filtered = [restoreResponses[0]];
+        }
+      }
 
       if (filtered.length === 0) {
         console.log("📭 No active orders found.");
         return;
       }
 
+      let foundOrders = false;
       for (const resp of filtered) {
         const kind = getInnerMessageKind(resp.message);
         if (kind.action === "restore-session" && kind.payload) {
-          const payload = kind.payload as any;
+          const payload = kind.payload as { restore_data?: RestoreData };
           if (payload.restore_data) {
             const data = payload.restore_data;
             if (data.orders?.length > 0) {
+              foundOrders = true;
               console.log(`📋 Active orders (${data.orders.length}):`);
               for (const o of data.orders) {
-                console.log(`  • ${o.id} — status: ${o.status} (trade index: ${o.trade_index})`);
+                const id = o.id ?? o.order_id ?? "unknown";
+                console.log(`  • ${id} — status: ${o.status} (trade index: ${o.trade_index})`);
               }
             }
             if (data.disputes?.length > 0) {
+              foundOrders = true;
               console.log(`\n⚠️  Active disputes (${data.disputes.length}):`);
               for (const d of data.disputes) {
                 console.log(`  • Dispute ${d.dispute_id} — order: ${d.order_id}, status: ${d.status}`);
@@ -99,6 +122,9 @@ async function main() {
             }
           }
         }
+      }
+      if (!foundOrders) {
+        console.log("📭 No active orders found.");
       }
     } else if (opts.orderId) {
       // Query specific order by ID
@@ -113,7 +139,23 @@ async function main() {
       await new Promise((r) => setTimeout(r, 5000));
 
       const responses = await fetchGiftWraps(client, tradeKeys.privateKey);
-      const filtered = filterResponsesByRequestId(responses, requestId);
+      // Try filtering by request_id; fall back to most recent order-related response
+      let filtered = filterResponsesByRequestId(responses, requestId);
+      if (filtered.length === 0) {
+        const orderResponses = responses
+          .filter((r) => {
+            const k = getInnerMessageKind(r.message);
+            return k.action === "orders" || k.id === opts.orderId;
+          })
+          .sort((a, b) => b.timestamp - a.timestamp);
+        if (orderResponses.length > 0) {
+          const age = Math.floor(Date.now() / 1000) - orderResponses[0].timestamp;
+          if (age > 30) {
+            console.warn(`⚠️  No request_id match — showing most recent order response (${age}s old, may be from a previous session)\n`);
+          }
+          filtered = [orderResponses[0]];
+        }
+      }
 
       if (filtered.length === 0) {
         console.log("📭 No response received. Order may not exist or not belong to you.");
