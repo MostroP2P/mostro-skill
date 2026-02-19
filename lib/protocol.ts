@@ -244,6 +244,21 @@ export function buildNewOrderPayload(params: {
   return { order };
 }
 
+// ─── Type Guards ────────────────────────────────────────────────────────────
+
+/**
+ * Narrow a Payload to the restore_data variant
+ */
+export function hasRestoreData(
+  payload: Payload
+): payload is { restore_data: RestoreData } {
+  return (
+    typeof payload === "object" &&
+    payload !== null &&
+    "restore_data" in payload
+  );
+}
+
 // ─── Response Parsing ───────────────────────────────────────────────────────
 
 /**

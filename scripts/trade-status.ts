@@ -19,8 +19,8 @@ import {
   buildRestoreMessage,
   getInnerMessageKind,
   filterResponsesByRequestId,
+  hasRestoreData,
   type Message,
-  type RestoreData,
 } from "../lib/protocol.js";
 import { getOrCreateKeys } from "../lib/keys.js";
 
@@ -101,10 +101,8 @@ async function main() {
       let foundOrders = false;
       for (const resp of filtered) {
         const kind = getInnerMessageKind(resp.message);
-        if (kind.action === "restore-session" && kind.payload) {
-          const payload = kind.payload as { restore_data?: RestoreData };
-          if (payload.restore_data) {
-            const data = payload.restore_data;
+        if (kind.action === "restore-session" && kind.payload && hasRestoreData(kind.payload)) {
+            const data = kind.payload.restore_data;
             if (data.orders?.length > 0) {
               foundOrders = true;
               console.log(`📋 Active orders (${data.orders.length}):`);
@@ -120,7 +118,6 @@ async function main() {
                 console.log(`  • Dispute ${d.dispute_id} — order: ${d.order_id}, status: ${d.status}`);
               }
             }
-          }
         }
       }
       if (!foundOrders) {
