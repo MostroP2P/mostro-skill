@@ -66,7 +66,7 @@ async function main() {
       // Restore session to get all active orders
       console.log("🔍 Fetching all active orders...\n");
       const requestId = Math.floor(Math.random() * 2 ** 48);
-      const message = buildRestoreMessage("restore-session", undefined, requestId);
+      const message = buildRestoreMessage("restore-session", requestId);
       await sendGiftWrap(client, message, null, tradeKeys.privateKey);
 
       // Wait for response
@@ -149,6 +149,10 @@ async function main() {
           })
           .sort((a, b) => b.timestamp - a.timestamp);
         if (orderResponses.length > 0) {
+          const age = Math.floor(Date.now() / 1000) - orderResponses[0].timestamp;
+          if (age > 30) {
+            console.warn(`⚠️  No request_id match — showing most recent order response (${age}s old, may be from a previous session)\n`);
+          }
           filtered = [orderResponses[0]];
         }
       }

@@ -190,8 +190,8 @@ export function buildOrderMessage(
  */
 export function buildRestoreMessage(
   action: "restore-session" | "last-trade-index",
-  payload?: Payload,
-  requestId?: number
+  requestId?: number,
+  payload?: Payload
 ): Message {
   const kind: MessageKind = {
     version: 1,
