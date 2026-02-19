@@ -82,5 +82,8 @@ export function validateConfig(config: MostroConfig): string[] {
   if (config.limits.max_trade_amount_sats <= 0) {
     errors.push("max_trade_amount_sats must be positive");
   }
+  if (config.limits.max_daily_volume_sats <= 0) {
+    errors.push("max_daily_volume_sats must be positive");
+  }
   return errors;
 }

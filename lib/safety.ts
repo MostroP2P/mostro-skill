@@ -54,7 +54,7 @@ interface TradeState {
   last_trade_at?: string;
 }
 
-function loadState(): TradeState {
+export function loadState(): TradeState {
   if (!existsSync(STATE_FILE)) return { daily_volume: {}, daily_trades: {} };
   try {
     return JSON.parse(readFileSync(STATE_FILE, "utf-8"));
@@ -68,7 +68,7 @@ function saveState(state: TradeState): void {
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), { mode: 0o600 });
 }
 
-function todayKey(): string {
+export function todayKey(): string {
   return new Date().toISOString().split("T")[0];
 }
 

@@ -32,7 +32,7 @@ import {
   type Payload,
 } from "../lib/protocol.js";
 import { getOrCreateKeys, getNextTradeKeys } from "../lib/keys.js";
-import { checkLimits, auditLog, recordTrade, validateOrderPrice, fetchBtcPrice } from "../lib/safety.js";
+import { checkLimits, auditLog, recordTrade, validateOrderPrice, fetchBtcPrice, loadState, todayKey } from "../lib/safety.js";
 
 // ─── Strategy Types ─────────────────────────────────────────────────────────
 
@@ -172,7 +172,8 @@ async function executeDCA(
       if (kind.action === "new-order") {
         const p = kind.payload as any;
         console.log(`✅ DCA order created: ${p?.order?.id ?? kind.id}`);
-        const actualSats = p?.order?.amount ?? estimatedSats;
+        // Market-price orders return amount=0, use estimate
+        const actualSats = p?.order?.amount || estimatedSats;
         recordTrade(actualSats);
       } else if (kind.action === "cant-do") {
         console.error(`❌ Rejected: ${JSON.stringify(kind.payload)}`);
@@ -247,7 +248,14 @@ async function executeLimit(
     console.log(`🏆 Best match: ${best.fiat_amount} ${best.currency} @ ${best.premium}% [${best.id.slice(0, 8)}...]`);
 
     const fiatAmount = parseFloat(best.fiat_amount);
-    const satsAmount = best.amount; // Order already has sats amount
+    // Range/market-price orders may have amount=0 in orderbook, estimate from fiat
+    let satsAmount = best.amount;
+    if (!satsAmount) {
+      const price = await fetchBtcPrice(strategy.currency, config.price_api);
+      satsAmount = price && price > 0
+        ? Math.round((fiatAmount / price) * 1e8)
+        : Math.round(fiatAmount * 1000); // conservative fallback
+    }
     const limitCheck = checkLimits(config.limits, satsAmount);
     if (!limitCheck.allowed) {
       console.log(`🚫 Blocked by limits: ${limitCheck.reason}`);
@@ -324,9 +332,18 @@ async function executeMarketMaker(
     ? Math.round((strategy.fiat_amount / btcPrice) * 1e8)
     : strategy.fiat_amount * 1000; // fallback
 
-  const limitCheck = checkLimits(config.limits, estimatedSats * 2);
-  if (!limitCheck.allowed) {
-    console.log(`🚫 Blocked by limits: ${limitCheck.reason}`);
+  // Check per-trade limit (each order individually)
+  if (estimatedSats > config.limits.max_trade_amount_sats) {
+    console.log(`🚫 Single order (${estimatedSats} sats) exceeds per-trade limit (${config.limits.max_trade_amount_sats} sats)`);
+    return;
+  }
+
+  // Check daily volume limit (both orders combined)
+  const state = loadState();
+  const today = todayKey();
+  const todayVolume = state.daily_volume[today] ?? 0;
+  if (todayVolume + estimatedSats * 2 > config.limits.max_daily_volume_sats) {
+    console.log(`🚫 Would exceed daily limit: ${todayVolume + estimatedSats * 2} > ${config.limits.max_daily_volume_sats} sats`);
     return;
   }
 

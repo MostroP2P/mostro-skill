@@ -173,8 +173,8 @@ async function main() {
         console.log(`   Status: ${order?.status}`);
         console.log(`   Amount: ${order?.fiat_amount} ${order?.fiat_code}`);
 
-        // Use actual sats from order response, or estimate
-        const actualSats = order?.amount ?? estimatedSats;
+        // Use actual sats from order response, or estimate (market-price orders have amount=0)
+        const actualSats = order?.amount || estimatedSats;
         recordTrade(actualSats);
         auditLog({
           timestamp: new Date().toISOString(),
