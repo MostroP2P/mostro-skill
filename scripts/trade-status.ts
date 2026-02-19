@@ -65,20 +65,35 @@ async function main() {
       // Restore session to get all active orders
       console.log("🔍 Fetching all active orders...\n");
       const requestId = Math.floor(Math.random() * 2 ** 48);
-      const message = buildRestoreMessage("restore-session");
+      const message = buildRestoreMessage("restore-session", undefined, requestId);
       await sendGiftWrap(client, message, null, tradeKeys.privateKey);
 
       // Wait for response
       await new Promise((r) => setTimeout(r, 5000));
 
       const responses = await fetchGiftWraps(client, tradeKeys.privateKey);
-      const filtered = filterResponsesByRequestId(responses, requestId);
+      // Try filtering by request_id first; fall back to most recent restore response
+      let filtered = filterResponsesByRequestId(responses, requestId);
+      if (filtered.length === 0) {
+        // Mostro may not echo request_id — take only the most recent restore response
+        // to avoid showing stale data from previous sessions
+        const restoreResponses = responses
+          .filter((r) => {
+            const k = getInnerMessageKind(r.message);
+            return k.action === "restore-session";
+          })
+          .sort((a, b) => b.timestamp - a.timestamp);
+        if (restoreResponses.length > 0) {
+          filtered = [restoreResponses[0]];
+        }
+      }
 
       if (filtered.length === 0) {
         console.log("📭 No active orders found.");
         return;
       }
 
+      let foundOrders = false;
       for (const resp of filtered) {
         const kind = getInnerMessageKind(resp.message);
         if (kind.action === "restore-session" && kind.payload) {
@@ -86,12 +101,15 @@ async function main() {
           if (payload.restore_data) {
             const data = payload.restore_data;
             if (data.orders?.length > 0) {
+              foundOrders = true;
               console.log(`📋 Active orders (${data.orders.length}):`);
               for (const o of data.orders) {
-                console.log(`  • ${o.id} — status: ${o.status} (trade index: ${o.trade_index})`);
+                const id = o.order_id ?? o.id ?? "unknown";
+                console.log(`  • ${id} — status: ${o.status} (trade index: ${o.trade_index})`);
               }
             }
             if (data.disputes?.length > 0) {
+              foundOrders = true;
               console.log(`\n⚠️  Active disputes (${data.disputes.length}):`);
               for (const d of data.disputes) {
                 console.log(`  • Dispute ${d.dispute_id} — order: ${d.order_id}, status: ${d.status}`);
@@ -99,6 +117,9 @@ async function main() {
             }
           }
         }
+      }
+      if (!foundOrders) {
+        console.log("📭 No active orders found.");
       }
     } else if (opts.orderId) {
       // Query specific order by ID
@@ -113,7 +134,11 @@ async function main() {
       await new Promise((r) => setTimeout(r, 5000));
 
       const responses = await fetchGiftWraps(client, tradeKeys.privateKey);
-      const filtered = filterResponsesByRequestId(responses, requestId);
+      // Try filtering by request_id; fall back to all recent responses
+      let filtered = filterResponsesByRequestId(responses, requestId);
+      if (filtered.length === 0) {
+        filtered = responses;
+      }
 
       if (filtered.length === 0) {
         console.log("📭 No response received. Order may not exist or not belong to you.");

@@ -30,7 +30,7 @@ All scripts are in `scripts/` and run with `tsx`:
 |--------|-------------|---------|
 | `get-info.ts` | Mostro instance info (version, fees, currencies, limits) | `tsx scripts/get-info.ts` |
 | `list-orders.ts` | List order book | `tsx scripts/list-orders.ts --currency USD --kind sell --status pending` |
-| `trade-status.ts` | Check own trade status | `tsx scripts/trade-status.ts --order-id <uuid>` or `--all` |
+| `trade-status.ts` | Check own trade status (see [Session Recovery](#session-recovery)) | `tsx scripts/trade-status.ts --order-id <uuid>` or `--all` |
 
 ### Trading (Requires Confirmation)
 
@@ -164,5 +164,42 @@ Mostro uses Nostr events for communication:
 - **Kind 1059**: Gift wrap messages (NIP-59) for private communication
 
 All messages are encrypted using NIP-44 and wrapped in NIP-59 gift wrap for privacy.
+
+### Session Recovery
+
+Mostro uses ephemeral trade keys derived from your seed (BIP-32). If you lose your session (app crash, restart, new device), you can recover your active orders using `trade-status.ts --all`, which sends a `restore-session` message to Mostro.
+
+**How it works:**
+
+1. Your identity is tied to your seed mnemonic (saved at `~/.mostro-skill/seed`)
+2. Mostro tracks which trade keys belong to which orders
+3. `restore-session` asks Mostro to return all orders and disputes associated with your trade key
+
+**Usage:**
+
+```bash
+# Recover all active orders and disputes after losing session
+tsx scripts/trade-status.ts --all
+
+# Check a specific order by ID (if you still have it)
+tsx scripts/trade-status.ts --order-id <uuid>
+```
+
+**What you get back:**
+- Active orders with their `order_id`, `status`, and `trade_index`
+- Active disputes with `dispute_id`, `order_id`, and `status`
+
+**Important notes:**
+- The seed mnemonic is your only way to recover. **Back it up!**
+- `restore-session` only returns orders linked to trade index 1 by default
+- Orders in terminal states (completed, expired) may not appear
+- If you imported a mnemonic via `restore-session.ts`, use `--all` to verify your orders were recovered
+
+### request_id
+
+The `request_id` field is **optional** in all Mostro protocol messages. When included in a request, Mostro may echo it back in the response to allow correlation. However:
+- Not all Mostro versions echo `request_id` in responses
+- Clients should not rely on `request_id` being present in responses
+- When filtering responses, fall back to matching by action type if no `request_id` match is found
 
 See `docs/IMPLEMENTATION.md` for full protocol details.
