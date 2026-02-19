@@ -186,7 +186,7 @@ tsx scripts/trade-status.ts --order-id <uuid>
 ```
 
 **What you get back:**
-- Active orders with their `order_id`, `status`, and `trade_index`
+- Active orders with their identifier (`id` per protocol docs, `order_id` in some server versions), `status`, and `trade_index`
 - Active disputes with `dispute_id`, `order_id`, and `status`
 
 **Important notes:**
