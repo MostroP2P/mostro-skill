@@ -4,6 +4,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+<p align="center">
+  <img src="openclaw-mostro.png" alt="mostro & openclaw being friends" width="300" />
+</p>
+
 ## What is this?
 
 **mostro-skill** is a modular skill package that teaches AI agents how to trade Bitcoin peer-to-peer on Mostro. It acts as a bridge between AI agent platforms (like [OpenClaw](https://openclaw.ai), Claude Desktop, Cursor, etc.) and the Mostro P2P exchange, communicating through the existing Nostr protocol.
