@@ -146,8 +146,8 @@ Edit `config.json`:
   "relays": ["wss://relay.mostro.network"],
   "network": "mainnet",
   "limits": {
-    "max_trade_amount_fiat": 100,
-    "max_daily_volume_fiat": 500,
+    "max_trade_amount_sats": 50000,
+    "max_daily_volume_sats": 500000,
     "max_trades_per_day": 10,
     "cooldown_seconds": 300,
     "require_confirmation": true
