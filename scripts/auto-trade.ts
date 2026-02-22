@@ -32,7 +32,7 @@ import {
   type Payload,
 } from "../lib/protocol.js";
 import { getOrCreateKeys, getNextTradeKeys } from "../lib/keys.js";
-import { checkLimits, auditLog, recordTrade, validateOrderPrice } from "../lib/safety.js";
+import { checkLimits, auditLog, recordTrade, validateOrderPrice, fetchBtcPrice, loadState, todayKey } from "../lib/safety.js";
 
 // ─── Strategy Types ─────────────────────────────────────────────────────────
 
@@ -116,8 +116,14 @@ async function executeDCA(
   console.log(`   Max premium: ${strategy.max_premium}%`);
   console.log("");
 
-  // Check limits
-  const limitCheck = checkLimits(config.limits, strategy.fiat_amount);
+  // Estimate sats for limit checking
+  const btcPrice = await fetchBtcPrice(strategy.currency, config.price_api);
+  const estimatedSats = btcPrice && btcPrice > 0
+    ? Math.round((strategy.fiat_amount / btcPrice) * 1e8)
+    : Math.round(strategy.fiat_amount * 1000); // fallback
+
+  // Check limits (in sats)
+  const limitCheck = checkLimits(config.limits, estimatedSats);
   if (!limitCheck.allowed) {
     console.log(`🚫 Blocked by limits: ${limitCheck.reason}`);
     return;
@@ -166,7 +172,9 @@ async function executeDCA(
       if (kind.action === "new-order") {
         const p = kind.payload as any;
         console.log(`✅ DCA order created: ${p?.order?.id ?? kind.id}`);
-        recordTrade(strategy.fiat_amount);
+        // Market-price orders return amount=0, use estimate
+        const actualSats = p?.order?.amount || estimatedSats;
+        recordTrade(actualSats);
       } else if (kind.action === "cant-do") {
         console.error(`❌ Rejected: ${JSON.stringify(kind.payload)}`);
       }
@@ -240,7 +248,15 @@ async function executeLimit(
     console.log(`🏆 Best match: ${best.fiat_amount} ${best.currency} @ ${best.premium}% [${best.id.slice(0, 8)}...]`);
 
     const fiatAmount = parseFloat(best.fiat_amount);
-    const limitCheck = checkLimits(config.limits, fiatAmount);
+    // Range/market-price orders may have amount=0 in orderbook, estimate from fiat
+    let satsAmount = best.amount;
+    if (!satsAmount) {
+      const price = await fetchBtcPrice(strategy.currency, config.price_api);
+      satsAmount = price && price > 0
+        ? Math.round((fiatAmount / price) * 1e8)
+        : Math.round(fiatAmount * 1000); // conservative fallback
+    }
+    const limitCheck = checkLimits(config.limits, satsAmount);
     if (!limitCheck.allowed) {
       console.log(`🚫 Blocked by limits: ${limitCheck.reason}`);
       return;
@@ -279,7 +295,7 @@ async function executeLimit(
       await sendGiftWrap(tradeClient, message, null, tradeKeys.privateKey);
       console.log("✅ Order taken!");
 
-      recordTrade(fiatAmount);
+      recordTrade(satsAmount);
       auditLog({
         timestamp: new Date().toISOString(),
         action: "auto-trade-limit",
@@ -310,8 +326,14 @@ async function executeMarketMaker(
   console.log(`   Amount: ${strategy.fiat_amount} ${strategy.currency}`);
   console.log("");
 
+  // Estimate sats for limit checking (need room for both buy and sell)
+  const btcPrice = await fetchBtcPrice(strategy.currency, config.price_api);
+  const estimatedSats = btcPrice && btcPrice > 0
+    ? Math.round((strategy.fiat_amount / btcPrice) * 1e8)
+    : Math.round(strategy.fiat_amount * 1000); // fallback
+
   // Check limits (need room for both buy and sell)
-  const limitCheck = checkLimits(config.limits, strategy.fiat_amount * 2);
+  const limitCheck = checkLimits(config.limits, estimatedSats * 2);
   if (!limitCheck.allowed) {
     console.log(`🚫 Blocked by limits: ${limitCheck.reason}`);
     return;
@@ -361,8 +383,8 @@ async function executeMarketMaker(
     await sendGiftWrap(client, sellMsg, null, sellTradeKeys.privateKey);
 
     console.log("✅ Market maker orders created.");
-    recordTrade(strategy.fiat_amount);
-    recordTrade(strategy.fiat_amount);
+    recordTrade(estimatedSats);
+    recordTrade(estimatedSats);
 
     auditLog({
       timestamp: new Date().toISOString(),

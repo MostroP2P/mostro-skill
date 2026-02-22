@@ -21,7 +21,7 @@ import {
   type OrderKind,
 } from "../lib/protocol.js";
 import { getOrCreateKeys } from "../lib/keys.js";
-import { checkLimits, auditLog, recordTrade } from "../lib/safety.js";
+import { checkLimits, auditLog, recordTrade, fetchBtcPrice } from "../lib/safety.js";
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -61,8 +61,20 @@ async function main() {
     process.exit(1);
   }
 
-  // Safety checks
-  const limitCheck = checkLimits(config.limits, opts.fiat_amount);
+  // Estimate sats from fiat for limit checking
+  const btcPrice = await fetchBtcPrice(opts.currency, config.price_api);
+  let estimatedSats = 0;
+  if (btcPrice && btcPrice > 0) {
+    // Convert fiat to BTC, then to sats
+    estimatedSats = Math.round((opts.fiat_amount / btcPrice) * 1e8);
+  } else {
+    // If we can't get price, use a conservative estimate (assume $100k BTC)
+    console.warn("⚠️  Could not fetch BTC price, using conservative estimate for limit check");
+    estimatedSats = opts.fiat_amount * 1000; // ~1000 sats per dollar at $100k
+  }
+
+  // Safety checks (using sats)
+  const limitCheck = checkLimits(config.limits, estimatedSats);
   if (!limitCheck.allowed) {
     console.error(`🚫 Trade blocked: ${limitCheck.reason}`);
     auditLog({
@@ -161,7 +173,9 @@ async function main() {
         console.log(`   Status: ${order?.status}`);
         console.log(`   Amount: ${order?.fiat_amount} ${order?.fiat_code}`);
 
-        recordTrade(opts.fiat_amount);
+        // Use actual sats from order response, or estimate (market-price orders have amount=0)
+        const actualSats = order?.amount || estimatedSats;
+        recordTrade(actualSats);
         auditLog({
           timestamp: new Date().toISOString(),
           action: "create-order",
@@ -169,6 +183,7 @@ async function main() {
           fiat_amount: opts.fiat_amount,
           fiat_code: opts.currency,
           result: "success",
+          details: `${actualSats} sats`,
         });
       } else if (kind.action === "cant-do") {
         console.error(`❌ Mostro rejected the order: ${JSON.stringify(kind.payload)}`);

@@ -6,8 +6,12 @@ import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 
 export interface TradeLimits {
-  max_trade_amount_fiat: number;
-  max_daily_volume_fiat: number;
+  /** @deprecated Use max_trade_amount_sats instead */
+  max_trade_amount_fiat?: number;
+  /** @deprecated Use max_daily_volume_sats instead */
+  max_daily_volume_fiat?: number;
+  max_trade_amount_sats: number;
+  max_daily_volume_sats: number;
   max_trades_per_day: number;
   cooldown_seconds: number;
   require_confirmation: boolean;
@@ -27,8 +31,8 @@ const DEFAULT_CONFIG: MostroConfig = {
   relays: ["wss://relay.mostro.network", "wss://nos.lol"],
   network: "mainnet",
   limits: {
-    max_trade_amount_fiat: 100,
-    max_daily_volume_fiat: 500,
+    max_trade_amount_sats: 50000,    // ~$50 USD at $100k/BTC
+    max_daily_volume_sats: 500000,   // ~$500 USD at $100k/BTC
     max_trades_per_day: 10,
     cooldown_seconds: 300,
     require_confirmation: true,
@@ -75,8 +79,11 @@ export function validateConfig(config: MostroConfig): string[] {
   if (config.relays.length === 0) {
     errors.push("At least one relay is required");
   }
-  if (config.limits.max_trade_amount_fiat <= 0) {
-    errors.push("max_trade_amount_fiat must be positive");
+  if (config.limits.max_trade_amount_sats <= 0) {
+    errors.push("max_trade_amount_sats must be positive");
+  }
+  if (config.limits.max_daily_volume_sats <= 0) {
+    errors.push("max_daily_volume_sats must be positive");
   }
   return errors;
 }

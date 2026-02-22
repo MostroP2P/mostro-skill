@@ -54,7 +54,7 @@ interface TradeState {
   last_trade_at?: string;
 }
 
-function loadState(): TradeState {
+export function loadState(): TradeState {
   if (!existsSync(STATE_FILE)) return { daily_volume: {}, daily_trades: {} };
   try {
     return JSON.parse(readFileSync(STATE_FILE, "utf-8"));
@@ -68,7 +68,7 @@ function saveState(state: TradeState): void {
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), { mode: 0o600 });
 }
 
-function todayKey(): string {
+export function todayKey(): string {
   return new Date().toISOString().split("T")[0];
 }
 
@@ -81,28 +81,30 @@ export interface LimitCheckResult {
 
 /**
  * Check if a trade is within configured limits
+ * @param limits - Trade limits configuration
+ * @param satsAmount - Amount of the trade in satoshis
  */
 export function checkLimits(
   limits: TradeLimits,
-  fiatAmount: number
+  satsAmount: number
 ): LimitCheckResult {
   const state = loadState();
   const today = todayKey();
 
-  // Check single trade amount
-  if (fiatAmount > limits.max_trade_amount_fiat) {
+  // Check single trade amount (in sats)
+  if (satsAmount > limits.max_trade_amount_sats) {
     return {
       allowed: false,
-      reason: `Trade amount ${fiatAmount} exceeds max ${limits.max_trade_amount_fiat}`,
+      reason: `Trade amount ${satsAmount} sats exceeds max ${limits.max_trade_amount_sats} sats`,
     };
   }
 
-  // Check daily volume
+  // Check daily volume (in sats)
   const todayVolume = state.daily_volume[today] ?? 0;
-  if (todayVolume + fiatAmount > limits.max_daily_volume_fiat) {
+  if (todayVolume + satsAmount > limits.max_daily_volume_sats) {
     return {
       allowed: false,
-      reason: `Would exceed daily volume limit: ${todayVolume + fiatAmount} > ${limits.max_daily_volume_fiat}`,
+      reason: `Would exceed daily volume limit: ${todayVolume + satsAmount} > ${limits.max_daily_volume_sats} sats`,
     };
   }
 
@@ -133,12 +135,13 @@ export function checkLimits(
 
 /**
  * Record a trade execution for limit tracking
+ * @param satsAmount - Amount of the trade in satoshis
  */
-export function recordTrade(fiatAmount: number): void {
+export function recordTrade(satsAmount: number): void {
   const state = loadState();
   const today = todayKey();
 
-  state.daily_volume[today] = (state.daily_volume[today] ?? 0) + fiatAmount;
+  state.daily_volume[today] = (state.daily_volume[today] ?? 0) + satsAmount;
   state.daily_trades[today] = (state.daily_trades[today] ?? 0) + 1;
   state.last_trade_at = new Date().toISOString();
 
