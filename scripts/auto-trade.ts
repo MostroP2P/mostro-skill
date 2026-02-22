@@ -120,7 +120,7 @@ async function executeDCA(
   const btcPrice = await fetchBtcPrice(strategy.currency, config.price_api);
   const estimatedSats = btcPrice && btcPrice > 0
     ? Math.round((strategy.fiat_amount / btcPrice) * 1e8)
-    : strategy.fiat_amount * 1000; // fallback
+    : Math.round(strategy.fiat_amount * 1000); // fallback
 
   // Check limits (in sats)
   const limitCheck = checkLimits(config.limits, estimatedSats);
@@ -330,7 +330,7 @@ async function executeMarketMaker(
   const btcPrice = await fetchBtcPrice(strategy.currency, config.price_api);
   const estimatedSats = btcPrice && btcPrice > 0
     ? Math.round((strategy.fiat_amount / btcPrice) * 1e8)
-    : strategy.fiat_amount * 1000; // fallback
+    : Math.round(strategy.fiat_amount * 1000); // fallback
 
   // Check limits (need room for both buy and sell)
   const limitCheck = checkLimits(config.limits, estimatedSats * 2);
