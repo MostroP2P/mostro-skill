@@ -2,7 +2,7 @@
 
 > AI skill for trading Bitcoin P2P on [Mostro](https://mostro.network) — enabling AI agents to interact with the Mostro exchange protocol via Nostr.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 <p align="center">
   <img src="openclaw-mostro.png" alt="mostro & openclaw being friends" width="300" />
@@ -467,4 +467,4 @@ Contributions welcome! Areas where help is needed:
 
 ## License
 
-[MIT](LICENSE)
+[GNU General Public License v3.0](LICENSE)
