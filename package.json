@@ -1,6 +1,7 @@
 {
   "name": "mostro-trading",
   "version": "0.1.0",
+  "license": "GPL-3.0-only",
   "description": "AI skill for trading on Mostro P2P Bitcoin exchange via Nostr",
   "type": "module",
   "scripts": {
