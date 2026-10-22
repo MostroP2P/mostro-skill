@@ -450,7 +450,7 @@ npm run build
 ## Related Projects
 
 - [Mostro](https://github.com/MostroP2P/mostro) — The Mostro daemon (Rust)
-- [Mostro Mobile](https://github.com/MostroP2P/mobile) — Mobile client (Flutter)
+- [Mostro App](https://github.com/MostroP2P/app) — Mobile, desktop and web client (Flutter + Rust)
 - [mostro-cli](https://github.com/MostroP2P/mostro-cli) — Command-line client (Rust)
 - [Mostro Protocol](https://mostro.network/protocol/) — Protocol specification
 - [OpenClaw](https://openclaw.ai) — AI agent platform with skill support
